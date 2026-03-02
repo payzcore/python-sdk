@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "payzcore"
+version = "1.0.2"
+description = "PayzCore Python SDK - Blockchain transaction monitoring API client"
+readme = "README.md"
+authors = [
+    {name = "PayzCore", email = "dev@payzcore.com"},
+]
+keywords = ["payzcore", "blockchain", "cryptocurrency", "stablecoin", "usdt", "usdc", "monitoring", "webhook", "api"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+license = "MIT"
+requires-python = ">=3.9"
+dependencies = [
+    "httpx>=0.24.0",
+]
+
+[project.urls]
+Homepage = "https://payzcore.com"
+Documentation = "https://docs.payzcore.com"
+Repository = "https://github.com/payzcore/python-sdk"
+Changelog = "https://docs.payzcore.com/docs/changelog/v1-0-0"
