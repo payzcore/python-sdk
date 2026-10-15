@@ -30,7 +30,7 @@ def _map_project_list_item(raw: Dict[str, Any]) -> ProjectListItem:
         "id": raw["id"],
         "name": raw["name"],
         "slug": raw["slug"],
-        "api_key": raw["api_key"],
+        "api_key_prefix": raw.get("api_key_prefix"),
         "webhook_url": raw.get("webhook_url"),
         "is_active": raw["is_active"],
         "created_at": raw["created_at"],

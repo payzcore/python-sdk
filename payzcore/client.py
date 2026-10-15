@@ -21,6 +21,7 @@ DEFAULT_BASE_URL = "https://api.payzcore.com"
 DEFAULT_TIMEOUT = 30.0
 DEFAULT_MAX_RETRIES = 2
 RETRY_BASE_S = 0.2
+SDK_VERSION = "1.0.3"
 
 
 class HttpClient:
@@ -45,7 +46,7 @@ class HttpClient:
     def _headers(self) -> Dict[str, str]:
         headers: Dict[str, str] = {
             "Content-Type": "application/json",
-            "User-Agent": "payzcore-python/1.0.0",
+            "User-Agent": f"payzcore-python/{SDK_VERSION}",
         }
         if self._use_master_key:
             headers["x-master-key"] = self._api_key
@@ -63,7 +64,14 @@ class HttpClient:
         url = f"{self._base_url}{path}"
         last_error: Optional[Exception] = None
 
-        for attempt in range(self._max_retries + 1):
+        # A POST is only retried when it carries an idempotency key
+        # (external_order_id). Otherwise a retry after a lost response could
+        # create a second payment.
+        retries = self._max_retries
+        if method == "POST" and not (body or {}).get("external_order_id"):
+            retries = 0
+
+        for attempt in range(retries + 1):
             if attempt > 0:
                 time.sleep(RETRY_BASE_S * (2 ** (attempt - 1)))
 

@@ -67,6 +67,8 @@ def _map_payment_list_item(raw: Dict[str, Any]) -> PaymentListItem:
         "paid_at": raw.get("paid_at"),
         "created_at": raw["created_at"],
     }
+    if raw.get("updated_at") is not None:
+        result["updated_at"] = raw["updated_at"]
     if raw.get("external_order_id") is not None:
         result["external_order_id"] = raw["external_order_id"]
     return result
@@ -94,6 +96,7 @@ def _map_payment_detail(raw: Dict[str, Any]) -> PaymentDetail:
         "token": raw.get("token"),
         "tx_hash": raw.get("tx_hash"),
         "expires_at": raw["expires_at"],
+        "paid_at": raw.get("paid_at"),
         "transactions": [_map_transaction(t) for t in txs],
     }
     if raw.get("awaiting_network") is not None:
@@ -128,7 +131,8 @@ class Payments:
             token: Stablecoin token ("USDT" or "USDC"). Default: "USDT".
             external_order_id: Optional order ID for idempotency.
             address: Pre-assign a specific static address for this customer (dedicated mode only).
-            expires_in: Expiry in seconds (300-86400). Default: 3600.
+            expires_in: Expiry in seconds (300-86400). Default: the project's
+                payment expiry setting (60 minutes unless changed).
             metadata: Optional metadata dict.
 
         Returns:
@@ -154,7 +158,9 @@ class Payments:
         raw = self._client.post("/v1/payments", body)
         return {
             "success": True,
-            "existing": raw["existing"],
+            # The API only includes "existing" when an existing payment is
+            # returned; a freshly created payment has no such key.
+            "existing": bool(raw.get("existing", False)),
             "payment": _map_payment(raw["payment"]),
         }
 
@@ -164,16 +170,21 @@ class Payments:
         status: Optional[PaymentStatus] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
+        created_after: Optional[str] = None,
+        updated_after: Optional[str] = None,
     ) -> ListPaymentsResponse:
         """List payments for the project.
 
         Args:
             status: Filter by payment status.
-            limit: Max results to return.
+            limit: Max results to return (1-100, default 50).
             offset: Pagination offset.
+            created_after: ISO 8601 timestamp. Only payments created after it.
+            updated_after: ISO 8601 timestamp. Only payments updated after it
+                (sorted oldest-first; useful as a webhook fallback poll).
 
         Returns:
-            ListPaymentsResponse with list of payments.
+            ListPaymentsResponse with list of payments and pagination info.
         """
         params: Dict[str, str] = {}
         if status is not None:
@@ -182,14 +193,27 @@ class Payments:
             params["limit"] = str(limit)
         if offset is not None:
             params["offset"] = str(offset)
+        if created_after is not None:
+            params["created_after"] = created_after
+        if updated_after is not None:
+            params["updated_after"] = updated_after
 
         qs = urlencode(params)
         path = f"/v1/payments?{qs}" if qs else "/v1/payments"
         raw = self._client.get(path)
-        return {
+        result: ListPaymentsResponse = {
             "success": True,
             "payments": [_map_payment_list_item(p) for p in raw["payments"]],
         }
+        pagination = raw.get("pagination")
+        if pagination is not None:
+            result["pagination"] = {
+                "total": pagination.get("total", 0),
+                "limit": pagination.get("limit", 0),
+                "offset": pagination.get("offset", 0),
+                "has_more": bool(pagination.get("has_more", False)),
+            }
+        return result
 
     def get(self, payment_id: str) -> GetPaymentResponse:
         """Get payment details (latest cached status from database).

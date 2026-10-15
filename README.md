@@ -67,6 +67,10 @@ response = client.payments.create(
 payments = client.payments.list(status="pending", limit=10)
 for p in payments["payments"]:
     print(f"{p['id']}: {p['status']} ({p['expected_amount']} {p['token']})")
+print(payments["pagination"]["has_more"])  # True if there is another page
+
+# Poll for changes (webhook fallback): payments updated since a timestamp
+changed = client.payments.list(updated_after="2026-10-15T00:00:00Z")
 
 # Get payment details (latest cached status from database)
 detail = client.payments.get("payment-uuid")
@@ -171,7 +175,7 @@ client = PayzCore(
     "pk_live_xxx",
     base_url="https://api.payzcore.com",  # API base URL
     timeout=30.0,                          # Request timeout (seconds)
-    max_retries=2,                         # Retries on 5xx errors
+    max_retries=2,                         # Retries on 5xx/network errors (POST only when external_order_id is set)
     master_key=False,                      # Use x-master-key header
 )
 ```
@@ -179,6 +183,8 @@ client = PayzCore(
 ## Error Handling
 
 ```python
+import time
+
 from payzcore import (
     PayzCore,
     PayzCoreError,
@@ -198,11 +204,10 @@ except AuthenticationError:
     print("Invalid API key")
 except ValidationError as e:
     print(f"Invalid params: {e.message}")
-    if e.details:
-        for d in e.details:
-            print(f"  {d['path']}: {d['message']}")
 except RateLimitError as e:
-    print(f"Rate limited. Daily: {e.is_daily}, retry after: {e.retry_after}")
+    # retry_after is a Unix timestamp (seconds), not a duration
+    wait = max(0, (e.retry_after or 0) - int(time.time()))
+    print(f"Rate limited. Daily: {e.is_daily}, retry in {wait}s")
 except NotFoundError:
     print("Resource not found")
 except PayzCoreError as e:

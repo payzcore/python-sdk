@@ -44,10 +44,12 @@ class CreatePaymentParams(TypedDict, total=False):
     metadata: Dict[str, Any]
 
 
-class AvailableNetwork(TypedDict):
+class AvailableNetwork(TypedDict, total=False):
     network: Network
     name: str
     tokens: List[Token]
+    confirmations: int
+    explorer: str
 
 
 class Payment(TypedDict, total=False):
@@ -71,7 +73,7 @@ class Payment(TypedDict, total=False):
 
 class CreatePaymentResponse(TypedDict):
     success: bool
-    existing: bool
+    existing: bool  # True when an existing pending payment was returned
     payment: Payment
 
 
@@ -89,17 +91,28 @@ class PaymentListItem(TypedDict, total=False):
     expires_at: str
     paid_at: Optional[str]
     created_at: str
+    updated_at: str
 
 
 class ListPaymentsParams(TypedDict, total=False):
     status: PaymentStatus
     limit: int
     offset: int
+    created_after: str
+    updated_after: str
 
 
-class ListPaymentsResponse(TypedDict):
+class Pagination(TypedDict):
+    total: int
+    limit: int
+    offset: int
+    has_more: bool
+
+
+class ListPaymentsResponse(TypedDict, total=False):
     success: bool
     payments: List[PaymentListItem]
+    pagination: Pagination
 
 
 class Transaction(TypedDict):
@@ -134,6 +147,7 @@ class PaymentDetail(TypedDict, total=False):
     token: Optional[Token]
     tx_hash: Optional[str]
     expires_at: str
+    paid_at: Optional[str]
     transactions: List[Transaction]
     awaiting_network: bool
 
@@ -172,7 +186,7 @@ class ProjectListItem(TypedDict, total=False):
     id: str
     name: str
     slug: str
-    api_key: str
+    api_key_prefix: Optional[str]  # list never returns the full key
     webhook_url: Optional[str]
     is_active: bool
     created_at: str
@@ -191,9 +205,9 @@ class WebhookPayload(TypedDict, total=False):
     payment_id: str
     external_ref: str
     external_order_id: Optional[str]
-    network: Network
-    token: Token
-    address: str
+    network: Optional[Network]  # None if the customer never selected a network
+    token: Optional[Token]
+    address: Optional[str]  # None if the customer never selected a network
     expected_amount: str
     paid_amount: str
     tx_hash: Optional[str]
@@ -201,6 +215,7 @@ class WebhookPayload(TypedDict, total=False):
     paid_at: Optional[str]  # Only set for payment.completed and payment.overpaid; None for others
     metadata: Dict[str, Any]
     timestamp: str
+    late_payment: bool  # only present (True) when funds arrived after expiry
     # Payment link buyer fields (only present for payment link payments)
     buyer_email: Optional[str]
     buyer_name: Optional[str]

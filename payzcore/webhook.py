@@ -85,11 +85,11 @@ def parse_webhook(body: str) -> WebhookPayload:
     """
     raw: Dict[str, Any] = json.loads(body)
 
-    network = raw.get("network", "")
+    network = raw.get("network") or ""
     if network and network not in SUPPORTED_NETWORKS:
         logger.warning("[PayzCore] Unknown network in webhook: %s", network)
 
-    token = raw.get("token", "")
+    token = raw.get("token") or ""
     if token and token not in SUPPORTED_TOKENS:
         logger.warning("[PayzCore] Unknown token in webhook: %s", token)
 
@@ -97,9 +97,10 @@ def parse_webhook(body: str) -> WebhookPayload:
         "event": raw["event"],
         "payment_id": raw["payment_id"],
         "external_ref": raw["external_ref"],
-        "network": raw["network"],
-        "token": raw.get("token", "USDT"),
-        "address": raw["address"],
+        # network/token/address are null when the customer never picked a network
+        "network": raw.get("network"),
+        "token": raw.get("token"),
+        "address": raw.get("address"),
         "expected_amount": raw["expected_amount"],
         "paid_amount": raw["paid_amount"],
         "tx_hash": raw.get("tx_hash"),
@@ -110,6 +111,9 @@ def parse_webhook(body: str) -> WebhookPayload:
     }
     if raw.get("external_order_id") is not None:
         payload["external_order_id"] = raw["external_order_id"]
+    # True only when funds arrived after the payment had expired
+    if raw.get("late_payment") is True:
+        payload["late_payment"] = True
     # Payment link buyer fields (only present for payment link payments)
     if raw.get("buyer_email") is not None:
         payload["buyer_email"] = raw["buyer_email"]

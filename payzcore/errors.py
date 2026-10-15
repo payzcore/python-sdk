@@ -58,7 +58,13 @@ class ValidationError(PayzCoreError):
 
 
 class RateLimitError(PayzCoreError):
-    """Raised when rate limit is exceeded (HTTP 429)."""
+    """Raised when rate limit is exceeded (HTTP 429).
+
+    ``retry_after`` is the absolute Unix timestamp (seconds) from the
+    ``X-RateLimit-Reset`` header, not a number of seconds to wait. Use
+    ``max(0, err.retry_after - time.time())`` to get the wait time.
+    ``is_daily`` is True when the daily plan limit was hit.
+    """
 
     def __init__(
         self,
@@ -72,9 +78,14 @@ class RateLimitError(PayzCoreError):
 
 
 class IdempotencyError(PayzCoreError):
-    """Raised when external_order_id conflicts with a different external_ref (HTTP 409)."""
+    """Raised on any HTTP 409 Conflict.
 
-    def __init__(self, message: str = "Idempotency conflict") -> None:
+    Examples: ``external_order_id`` reused with a different ``external_ref`` or
+    amount, cancelling a payment that is no longer pending, or submitting a
+    tx hash that is already used. Read ``message`` for the exact reason.
+    """
+
+    def __init__(self, message: str = "Conflict") -> None:
         super().__init__(message, 409, "idempotency_error")
 
 

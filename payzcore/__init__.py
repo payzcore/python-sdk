@@ -39,6 +39,7 @@ from .types import (
     ListPaymentsParams,
     ListPaymentsResponse,
     ListProjectsResponse,
+    Pagination,
     Payment,
     PaymentDetail,
     PaymentListItem,
@@ -51,7 +52,7 @@ from .types import (
     WebhookPayload,
 )
 
-__version__ = "1.0.0"
+__version__ = "1.0.3"
 __all__ = [
     "PayzCore",
     # Webhook
@@ -81,6 +82,7 @@ __all__ = [
     "PaymentListItem",
     "ListPaymentsParams",
     "ListPaymentsResponse",
+    "Pagination",
     "Transaction",
     "PaymentDetail",
     "GetPaymentResponse",
